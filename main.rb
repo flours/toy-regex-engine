@@ -13,7 +13,7 @@ class StateMachine
   end
 
   def match(input)
-    p @orders
+    pp @orders
     while @cursor < @orders.length
       order = @orders[@cursor]
 
@@ -48,6 +48,7 @@ end
 
 class Push
   def process(s, operand, input)
+    pp "push #{operand}, #{s.input_cursor}"
     s.stack.push([operand, s.input_cursor])
     return true
 
@@ -86,32 +87,49 @@ end
 
 
 class Parser
-  def self.parse(input)
-    ast=[]
-    ast=self.parse1(input,0,0)
+  def self.add_star(ret, input, cursor, input_cursor, base)
+        pp ret
+        ret  = ret[0..-2]+[Order.new(Push.new, cursor+2+base)]+[ret[-1]]+[Order.new(Jump.new, cursor-ret[-1].length+base)]
+      [ret, input_cursor+1, cursor+1]
   end
 
-  def self.parse1(input, cursor, input_cursor)
+  def self.add_char(ret, input, cursor, input_cursor, base)
+    ret.push(Order.new(Char.new, input[input_cursor]))
+    [ret,input_cursor+1,cursor+1]
+  end
+
+  def self.parse(input)
+    ast=[]
+    ast,_,_=self.parse1(input,0,0)
+    ast
+  end
+
+  def self.parse1(input, cursor, input_cursor, base=0)
     ret=[]
-    (0..input.length-1).each do |ch|
-      case input[ch]
+    while input_cursor<input.length 
+      case input[input_cursor]
       when "*"
-        # cursor-lengthの場所にPush cursor+2, cursor+=1
-        ret  = ret[0..cursor-ret[-1].length-1]+[Order.new(Push.new, cursor+2)]+ret[cursor-ret[-1].length..-1]+[Order.new(Jump.new, cursor-1)]
-        cursor+=2
+        ret, input_cursor, cursor = self.add_star(ret, input, cursor, input_cursor, base)
+      when "+"
+        ret, input_cursor, cursor = self.add_char(ret, input, cursor, input_cursor-1, base)
+        input_cursor-=1
+        ret, input_cursor, cursor = self.add_star(ret, input, cursor, input_cursor, base)
         input_cursor+=1
+      when "("
+        tmp_ret, cursor, input_cursor = self.parse1(input, 0, input_cursor+1, base=cursor)
+        ret+=[tmp_ret]
+      when ")"
+        return ret, cursor, input_cursor+1
       else
-        ret.push(Order.new(Char.new, input[input_cursor]))
-        input_cursor+=1
-        cursor+=1
+        ret, input_cursor, cursor = self.add_char(ret, input, cursor, input_cursor, base)
       end
     end
     ret.push(Order.new(Match.new, nil))
-    return ret
+    return ret.flatten, cursor ,input_cursor
   end
 end
 
-p "正規表現入力(対応記号、*のみ)"
+p "正規表現入力(対応記号、+*)"
 order = gets.chomp
 pp Parser.parse(order)
 
@@ -119,5 +137,9 @@ while true
   sm = StateMachine.new(Parser.parse(order))
 
   input = gets.chomp
-  p sm.match(input)
+  if sm.match(input)
+    p "マッチしました"
+  else
+    p "マッチしませんでした"
+  end
 end
