@@ -99,6 +99,7 @@ class Parser
         # cursor-lengthの場所にPush cursor+2, cursor+=1
         ret  = ret[0..cursor-ret[-1].length-1]+[Order.new(Push.new, cursor+2)]+ret[cursor-ret[-1].length..-1]+[Order.new(Jump.new, cursor-1)]
         cursor+=2
+        input_cursor+=1
       else
         ret.push(Order.new(Char.new, input[input_cursor]))
         input_cursor+=1
