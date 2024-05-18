@@ -1,11 +1,5 @@
 # input /ab/
-#
-#
-#
 
-
-def main
-end
 
 
 class StateMachine
@@ -41,6 +35,10 @@ class Order
   def initialize(order, operand)
     @order = order
     @operand = operand
+  end
+
+  def length
+    1
   end
 
   def process(s, input)
@@ -86,9 +84,38 @@ class Match
   end
 end
 
+
+class Parser
+  def self.parse(input)
+    ast=[]
+    ast=self.parse1(input,0,0)
+  end
+
+  def self.parse1(input, cursor, input_cursor)
+    ret=[]
+    (0..input.length-1).each do |ch|
+      case input[ch]
+      when "*"
+        # cursor-lengthの場所にPush cursor+2, cursor+=1
+        ret  = ret[0..cursor-ret[-1].length-1]+[Order.new(Push.new, cursor+2)]+ret[cursor-ret[-1].length..-1]+[Order.new(Jump.new, cursor-1)]
+        cursor+=2
+      else
+        ret.push(Order.new(Char.new, input[input_cursor]))
+        input_cursor+=1
+        cursor+=1
+      end
+    end
+    ret.push(Order.new(Match.new, nil))
+    return ret
+  end
+end
+
+p "正規表現入力(対応記号、*のみ)"
+order = gets.chomp
+pp Parser.parse(order)
+
 while true
-  order = [Order.new(Char.new, "a"), Order.new(Push.new, 4),Order.new(Char.new, "b"), Order.new(Jump.new, 1), Order.new(Push.new, 7), Order.new(Char.new, "c"),Order.new(Jump.new, 8),Order.new(Char.new, "d"),  Order.new(Match.new, nil)]
-  sm = StateMachine.new(order)
+  sm = StateMachine.new(Parser.parse(order))
 
   input = gets.chomp
   p sm.match(input)
